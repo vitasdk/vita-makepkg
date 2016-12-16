@@ -708,7 +708,7 @@ create_package() {
 	# archive created using the same command line distinct from another.
 	# Disable bsdtar compression and use gzip -n for now.
 	cd_safe "usr/local/vitasdk/arm-vita-eabi"
-	LANG=C bsdtar -cf - * |
+	LANG=C bsdtar -hcf - * |
 	case "$PKGEXT" in
 		*tar.gz)  ${COMPRESSGZ[@]:-gzip -c -f -n} ;;
 		*tar.bz2) ${COMPRESSBZ2[@]:-bzip2 -c -f} ;;
