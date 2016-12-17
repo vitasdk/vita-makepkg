@@ -206,8 +206,12 @@ missing_source_file() {
 }
 
 run_pacman() {
-	echo "asked to run pacman?"
-	exit 1
+	if (( "$1" == "-U" )); then
+		vdpm ${PWD##*/}
+	else
+		echo "asked to run pacman?"
+		exit 1
+	fi
 }
 
 check_deps() {
