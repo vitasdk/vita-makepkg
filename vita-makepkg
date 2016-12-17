@@ -30,7 +30,7 @@
 #   awk, bsdtar (libarchive), bzip2, coreutils, fakeroot, file, find (findutils),
 #   gettext, gpg, grep, gzip, sed, tput (ncurses), xz
 
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+DIR="$( cd "$( dirname "$(readlink -f ${BASH_SOURCE[0]})" )" && pwd )"
 LIBRARY="$DIR"/libmakepkg
 
 # gettext initialization
