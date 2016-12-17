@@ -3,7 +3,7 @@
 #
 
 # This is used in VITABUILD files
-PREFIX=/usr/local/vitasdk/arm-vita-eabi/
+PREFIX=$VITASDK/arm-vita-eabi/
 
 #########################################################################
 # SOURCE ACQUISITION
