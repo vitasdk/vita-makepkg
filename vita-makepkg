@@ -30,7 +30,7 @@
 #   awk, bsdtar (libarchive), bzip2, coreutils, fakeroot, file, find (findutils),
 #   gettext, gpg, grep, gzip, sed, tput (ncurses), xz
 
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+DIR="$( cd "$( dirname "$(readlink -f ${BASH_SOURCE[0]})" )" && pwd )"
 LIBRARY="$DIR"/libmakepkg
 
 # gettext initialization
@@ -206,8 +206,12 @@ missing_source_file() {
 }
 
 run_pacman() {
-	echo "asked to run pacman?"
-	exit 1
+	if (( "$1" == "-U" )); then
+		vdpm "${*:2}"
+	else
+		echo "asked to run pacman?"
+		exit 1
+	fi
 }
 
 check_deps() {
@@ -707,7 +711,7 @@ create_package() {
 	# bsdtar's gzip compression always saves the time stamp, making one
 	# archive created using the same command line distinct from another.
 	# Disable bsdtar compression and use gzip -n for now.
-	cd_safe "usr/local/vitasdk/arm-vita-eabi"
+	cd_safe "./$VITASDK/arm-vita-eabi"
 	LANG=C bsdtar -hcf - * |
 	case "$PKGEXT" in
 		*tar.gz)  ${COMPRESSGZ[@]:-gzip -c -f -n} ;;
