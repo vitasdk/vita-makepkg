@@ -207,7 +207,7 @@ missing_source_file() {
 
 run_pacman() {
 	if (( "$1" == "-U" )); then
-		vdpm ${PWD##*/}
+		vdpm "${*:2}"
 	else
 		echo "asked to run pacman?"
 		exit 1
