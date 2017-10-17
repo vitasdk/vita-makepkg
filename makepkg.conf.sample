@@ -4,7 +4,7 @@
 
 # This is used in VITABUILD files
 PREFIX=$VITASDK/arm-vita-eabi/
-
+PKG_CONFIG_PATH=$PREFIX/lib/pkgconfig
 #########################################################################
 # SOURCE ACQUISITION
 #########################################################################
