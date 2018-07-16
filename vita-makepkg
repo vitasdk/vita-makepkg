@@ -217,17 +217,14 @@ run_pacman() {
 check_deps() {
 	(( $# > 0 )) || return 0
 
-	local ret=0
-	local pmout
-	pmout=$(run_pacman -T "$@")
-	ret=$?
-
-	if (( ret == 127 )); then #unresolved deps
-		printf "%s\n" "$pmout"
-	elif (( ret )); then
-		error "$(gettext "'%s' returned a fatal error (%i): %s")" "$PACMAN" "$ret" "$pmout"
-		return "$ret"
-	fi
+	# forceful install if not exist dep libs
+	for pkg in ${@}; do
+		if [[ -n $(find ${VITASDK}/arm-vita-eabi/lib -maxdepth 1 -iname ${pkg}.a) ]] ||
+			[[ -n $(find ${VITASDK}/arm-vita-eabi/lib -maxdepth 1 -iname lib${pkg}.a) ]]; then
+			continue
+		fi
+		run_pacman -U "$pkg"
+	done
 }
 
 handle_deps() {
@@ -923,10 +920,7 @@ check_vcs_software() {
 	# we currently only use global depends/makedepends arrays for --syncdeps
 	for attr in depends makedepends; do
 		get_pkgbuild_attribute "$pkg" "$attr" 1 'deps'
-		all_deps+=("${deps[@]}")
-
-		get_pkgbuild_attribute "$pkg" "${attr}_$CARCH" 1 'deps'
-		all_deps+=("${deps[@]}")
+		check_deps "${deps[@]}"
 	done
 
 	get_all_sources_for_arch 'all_sources'
