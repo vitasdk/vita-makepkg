@@ -39,4 +39,6 @@ download_local() {
 		error "$(gettext "%s was not found in the build directory and is not a URL.")" "$filename"
 		exit 1 # $E_MISSING_FILE
 	fi
+	
+	return 1
 }
