@@ -40,5 +40,5 @@ download_local() {
 		exit 1 # $E_MISSING_FILE
 	fi
 	
-	return 1
+	return 0
 }
