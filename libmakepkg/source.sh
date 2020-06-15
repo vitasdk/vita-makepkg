@@ -36,7 +36,8 @@ done
 download_sources() {
 	local netfile all_sources
 	local get_source_fn=get_all_sources_for_arch get_vcs=1
-
+	local retval
+	
 	msg "$(gettext "Retrieving sources...")"
 
 	while true; do
@@ -57,31 +58,39 @@ download_sources() {
 	"$get_source_fn" 'all_sources'
 	for netfile in "${all_sources[@]}"; do
 		pushd "$SRCDEST" &>/dev/null
-
+		
 		local proto=$(get_protocol "$netfile")
 		case "$proto" in
 			local)
 				download_local "$netfile"
+				retval=$?
 				;;
 			bzr*)
 				(( get_vcs )) && download_bzr "$netfile"
+				retval=$?
 				;;
 			git*)
 				(( get_vcs )) && download_git "$netfile"
+				retval=$?
 				;;
 			hg*)
 				(( get_vcs )) && download_hg "$netfile"
+				retval=$?
 				;;
 			svn*)
 				(( get_vcs )) && download_svn "$netfile"
+				retval=$?
 				;;
 			*)
 				download_file "$netfile"
+				retval=$?
 				;;
 		esac
 
 		popd &>/dev/null
 	done
+	
+	return $retval
 }
 
 extract_sources() {

@@ -34,7 +34,7 @@ download_file() {
 	local filepath=$(get_filepath "$netfile")
 	if [[ -n "$filepath" ]]; then
 		msg2 "$(gettext "Found %s")" "${filepath##*/}"
-		return
+		return 1
 	fi
 
 	local proto=$(get_protocol "$netfile")
@@ -71,15 +71,16 @@ download_file() {
 
 	if ! command -- "${cmdline[@]}" >&2; then
 		[[ ! -s $dlfile ]] && rm -f -- "$dlfile"
-		error "$(gettext "Failure while downloading %s")" "$url"
-		plain "$(gettext "Aborting...")"
-		exit 1
+		warning "$(gettext "Failure while downloading %s")" "$url"
+		return 0
 	fi
 
 	# rename the temporary download file to the final destination
 	if [[ $dlfile != "$filename" ]]; then
 		mv -f "$SRCDEST/$dlfile" "$SRCDEST/$filename"
 	fi
+	
+	return 1
 }
 
 extract_file() {

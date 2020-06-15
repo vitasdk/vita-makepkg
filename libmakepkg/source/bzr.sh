@@ -92,9 +92,8 @@ extract_bzr() {
 	if [[ -d "${dir##*/}" ]]; then
 		cd_safe "${dir##*/}"
 		if ! (bzr pull "$dir" -q --overwrite -r "$rev" && bzr clean-tree -q --detritus --force); then
-			error "$(gettext "Failure while updating working copy of %s %s repo")" "${repo}" "bzr"
-			plain "$(gettext "Aborting...")"
-			exit 1
+			warning "$(gettext "Failure while updating working copy of %s %s repo")" "${repo}" "bzr"
+			return 0
 		fi
 	elif ! bzr checkout "$dir" -r "$rev"; then
 		error "$(gettext "Failure while creating working copy of %s %s repo")" "${repo}" "bzr"
@@ -103,4 +102,6 @@ extract_bzr() {
 	fi
 
 	popd &>/dev/null
+	
+	return 1
 }

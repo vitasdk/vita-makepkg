@@ -64,9 +64,8 @@ download_svn() {
 		msg2 "$(gettext "Cloning %s %s repo...")" "${repo}" "svn"
 		mkdir -p "$dir/.makepkg"
 		if ! svn checkout -r ${ref} --config-dir "$dir/.makepkg" "$url" "$dir"; then
-			error "$(gettext "Failure while downloading %s %s repo")" "${repo}" "svn"
-			plain "$(gettext "Aborting...")"
-			exit 1
+			warning "$(gettext "Failure while downloading %s %s repo")" "${repo}" "svn"
+			return 1
 		fi
 	elif (( ! HOLDVER )); then
 		msg2 "$(gettext "Updating %s %s repo...")" "${repo}" "svn"
@@ -76,6 +75,8 @@ download_svn() {
 			warning "$(gettext "Failure while updating %s %s repo")" "${repo}" "svn"
 		fi
 	fi
+	
+	return 0
 }
 
 extract_svn() {
