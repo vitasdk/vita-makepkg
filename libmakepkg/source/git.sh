@@ -43,8 +43,9 @@ download_git() {
 	if [[ ! -d "$dir" ]] || dir_is_empty "$dir" ; then
 		msg2 "$(gettext "Cloning %s %s repo...")" "${repo}" "git"
 		if ! git clone --mirror "$url" "$dir"; then
-			warning "$(gettext "Failure while downloading %s %s repo")" "${repo}" "git"
-			return 1
+			error "$(gettext "Failure while downloading %s %s repo")" "${repo}" "git"
+			plain "$(gettext "Aborting...")"
+			exit 1
 		fi
 	elif (( ! HOLDVER )); then
 		cd_safe "$dir"
@@ -60,8 +61,6 @@ download_git() {
 			warning "$(gettext "Failure while updating %s %s repo")" "${repo}" "git"
 		fi
 	fi
-	
-	return 0
 }
 
 extract_git() {

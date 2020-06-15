@@ -1588,10 +1588,7 @@ if (( !REPKG )); then
 	if (( NOEXTRACT && ! VERIFYSOURCE )); then
 		warning "$(gettext "Using existing %s tree")" "\$srcdir/"
 	else
-		if ( download_sources ); then
-			msg "$(gettext "Cannot retrieve %s, skipping...")" "$pkgbase"
-			exit 0
-		fi
+		download_sources
 		check_source_integrity
 		(( VERIFYSOURCE )) && exit 0 # $E_OK
 

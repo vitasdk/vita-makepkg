@@ -43,8 +43,9 @@ download_hg() {
 	if [[ ! -d "$dir" ]] || dir_is_empty "$dir" ; then
 		msg2 "$(gettext "Cloning %s %s repo...")" "${repo}" "hg"
 		if ! hg clone -U "$url" "$dir"; then
-			warning "$(gettext "Failure while downloading %s %s repo")" "${repo}" "hg"
-			return 0
+			error "$(gettext "Failure while downloading %s %s repo")" "${repo}" "hg"
+			plain "$(gettext "Aborting...")"
+			exit 1
 		fi
 	elif (( ! HOLDVER )); then
 		msg2 "$(gettext "Updating %s %s repo...")" "${repo}" "hg"
@@ -54,8 +55,6 @@ download_hg() {
 			warning "$(gettext "Failure while updating %s %s repo")" "${repo}" "hg"
 		fi
 	fi
-	
-	return 1
 }
 
 extract_hg() {
