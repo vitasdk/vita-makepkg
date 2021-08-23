@@ -76,7 +76,7 @@ LOGGING=0
 NEEDED=0
 NOARCHIVE=0
 NOBUILD=0
-NODEPS=1
+NODEPS=0
 NOEXTRACT=0
 PKGFUNC=0
 PKGVERFUNC=0
@@ -217,6 +217,10 @@ run_pacman() {
 check_deps() {
 	(( $# > 0 )) || return 0
 
+	if (( NODEPS )); then
+		return 0
+	fi
+	
 	# forceful install if not exist dep libs
 	for pkg in ${@}; do
 		if [[ -n $(find ${VITASDK}/arm-vita-eabi/lib -maxdepth 1 -iname ${pkg}.a) ]] ||
