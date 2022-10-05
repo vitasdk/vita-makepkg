@@ -1025,8 +1025,8 @@ check_software() {
 
 	# strip - strip symbols from binaries/libraries
 	if check_option "strip" "y"; then
-		if ! type -p strip >/dev/null; then
-			error "$(gettext "Cannot find the %s binary required for object file stripping.")" "strip"
+		if ! type -p arm-vita-eabi-strip >/dev/null; then
+			error "$(gettext "Cannot find the %s binary required for object file stripping.")" "arm-vita-eabi-strip"
 			ret=1
 		fi
 	fi
