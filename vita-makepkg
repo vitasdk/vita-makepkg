@@ -712,7 +712,7 @@ create_package() {
 	# bsdtar's gzip compression always saves the time stamp, making one
 	# archive created using the same command line distinct from another.
 	# Disable bsdtar compression and use gzip -n for now.
-	cd_safe "./$VITASDK/arm-vita-eabi"
+	cd_safe "$VITASDK/arm-vita-eabi"
 	LANG=C bsdtar -hcf - * |
 	case "$PKGEXT" in
 		*tar.gz)  ${COMPRESSGZ[@]:-gzip -c -f -n} ;;
