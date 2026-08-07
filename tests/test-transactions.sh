@@ -65,8 +65,22 @@ docker run --rm \
 		pacman --config "$config" --query vitasdk-transaction-fixture |
 			grep -qx "vitasdk-transaction-fixture 1.0-1"
 
+		cp "$base_v2" "$base_v2.verified"
 		repo-add /repo/vitasdk-test.db.tar.gz "$base_v2"
 		pacman --config "$config" --sync --refresh --refresh --noconfirm
+		printf "corrupted-download\n" >> "$base_v2"
+		if pacman --config "$config" --sync --noconfirm vitasdk-transaction-consumer; then
+			printf "package with a mismatched repository hash was accepted\n" >&2
+			exit 1
+		fi
+		pacman --config "$config" --query vitasdk-transaction-fixture |
+			grep -qx "vitasdk-transaction-fixture 1.0-1"
+		if pacman --config "$config" --query vitasdk-transaction-consumer; then
+			printf "consumer was installed by a failed transaction\n" >&2
+			exit 1
+		fi
+		cp "$base_v2.verified" "$base_v2"
+
 		pacman --config "$config" --sync --noconfirm vitasdk-transaction-consumer
 		pacman --config "$config" --query vitasdk-transaction-fixture |
 			grep -qx "vitasdk-transaction-fixture 2.0-1"
@@ -85,6 +99,16 @@ docker run --rm \
 			grep -qx "vitasdk-transaction-fixture 2.0-1"
 
 		pacman --config "$config" --remove --noconfirm vitasdk-transaction-consumer
+		touch /sdk/var/lib/pacman/db.lck
+		if pacman --config "$config" --sync --noconfirm vitasdk-transaction-addon; then
+			printf "transaction proceeded while the database lock existed\n" >&2
+			exit 1
+		fi
+		if pacman --config "$config" --query vitasdk-transaction-addon; then
+			printf "addon was installed while the database was locked\n" >&2
+			exit 1
+		fi
+		rm -f /sdk/var/lib/pacman/db.lck
 		pacman --config "$config" --sync --noconfirm vitasdk-transaction-addon
 		grep -qx "addon" "$fixture_dir/addon.txt"
 		pacman --config "$config" --remove --noconfirm vitasdk-transaction-fixture

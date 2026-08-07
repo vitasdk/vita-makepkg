@@ -20,8 +20,8 @@ repository. Published VitaSDK repositories will be accepted only after the
 signed channel manifest and database hash have been verified.
 
 Build five synthetic Vita packages and exercise versioned dependency solving,
-repository upgrade, file-conflict rejection and shared-directory ownership
-with:
+repository upgrade, database-hash rejection of a corrupted package, stale-lock
+recovery, file-conflict rejection and shared-directory ownership with:
 
 ```sh
 tests/test-transactions.sh
