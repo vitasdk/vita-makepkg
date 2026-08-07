@@ -27,6 +27,13 @@ root, database, cache and non-interactive arguments without a network
 repository. `tests/test-transactions.sh` separately validates the generated
 packages with pacman and `repo-add`.
 
+Reject dependency arrays that accidentally put several package names in one
+entry with:
+
+```sh
+tests/test-dependency-lint.sh
+```
+
 The container test uses `SigLevel = Never` only for its local, ephemeral
 repository. Published VitaSDK repositories will be accepted only after the
 signed channel manifest and database hash have been verified.
