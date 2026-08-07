@@ -1,0 +1,14 @@
+pkgname=vitasdk-transaction-conflict
+pkgver=1.0
+pkgrel=1
+pkgdesc="VitaSDK file-conflict transaction test fixture"
+arch=('vita')
+url="https://vitasdk.org/"
+license=('MIT')
+options=('!strip' '!docs' '!libtool' '!staticlibs' '!emptydirs' '!zipman' '!purge' '!debug')
+
+package() {
+	local fixture_dir="$pkgdir$VITASDK/arm-vita-eabi/share/vitasdk-transaction-test"
+	install -dm755 "$fixture_dir"
+	printf 'conflict\n' > "$fixture_dir/version.txt"
+}

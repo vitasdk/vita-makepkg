@@ -18,3 +18,12 @@ tests/validate-zlib-package.sh \
 The container test uses `SigLevel = Never` only for its local, ephemeral
 repository. Published VitaSDK repositories will be accepted only after the
 signed channel manifest and database hash have been verified.
+
+Build four synthetic Vita packages and exercise repository upgrade, file
+conflict rejection and shared-directory ownership with:
+
+```sh
+tests/test-transactions.sh
+```
+
+Both container tests pin the same pacman 7.1 image by digest.

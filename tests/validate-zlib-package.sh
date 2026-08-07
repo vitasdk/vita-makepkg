@@ -12,6 +12,7 @@ run_pacman=${2:-}
 script_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd -P)
 package_dir=$(cd "$(dirname "$package")" && pwd -P)
 package_name=$(basename "$package")
+pacman_image='archlinux@sha256:c1829f370be8434135f43fb3acaef1256780804ac3b2d2eec90dfb1232e1ffdf'
 
 if [[ ! -f $package ]]; then
 	printf 'package not found: %s\n' "$package" >&2
@@ -65,7 +66,7 @@ docker run --rm \
 	--mount "type=bind,source=$package_dir,target=/input,readonly" \
 	--mount "type=bind,source=$script_dir/pacman.conf,target=/etc/pacman-vitasdk.conf,readonly" \
 	--env "PACKAGE_NAME=$package_name" \
-	archlinux:base-devel \
+	"$pacman_image" \
 	bash -euc '
 		pacman --version
 		install -d /repo /sdk/var/lib/pacman /sdk/var/cache/pacman/pkg
