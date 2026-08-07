@@ -647,14 +647,16 @@ write_pkginfo() {
 	write_kv_pair "size" "$size"
 	write_kv_pair "arch" "$pkgarch"
 
-	provides=()
+	local resolved_provides=()
 	while IFS= read -r value; do
-		provides+=("$value")
+		resolved_provides+=("$value")
 	done < <(find_libprovides)
-	depends=()
+	local resolved_depends=()
 	while IFS= read -r value; do
-		depends+=("$value")
+		resolved_depends+=("$value")
 	done < <(find_libdepends)
+	provides=("${resolved_provides[@]}")
+	depends=("${resolved_depends[@]}")
 
 	write_kv_pair "license"     "${license[@]}"
 	write_kv_pair "replaces"    "${replaces[@]}"

@@ -19,8 +19,9 @@ The container test uses `SigLevel = Never` only for its local, ephemeral
 repository. Published VitaSDK repositories will be accepted only after the
 signed channel manifest and database hash have been verified.
 
-Build four synthetic Vita packages and exercise repository upgrade, file
-conflict rejection and shared-directory ownership with:
+Build five synthetic Vita packages and exercise versioned dependency solving,
+repository upgrade, file-conflict rejection and shared-directory ownership
+with:
 
 ```sh
 tests/test-transactions.sh

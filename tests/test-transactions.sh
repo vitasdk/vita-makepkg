@@ -16,7 +16,7 @@ trap cleanup EXIT
 
 mkdir -p "$package_dir"
 
-for fixture in base-v1 base-v2 addon conflict; do
+for fixture in base-v1 base-v2 addon conflict consumer; do
 	fixture_work="$temporary_root/$fixture"
 	mkdir -p "$fixture_work/build"
 	cp "$script_dir/fixtures/$fixture/VITABUILD" "$fixture_work/VITABUILD"
@@ -46,22 +46,35 @@ docker run --rm \
 		base_v2=/repo/vitasdk-transaction-fixture-2.0-1-vita.pkg.tar.xz
 		addon=/repo/vitasdk-transaction-addon-1.0-1-vita.pkg.tar.xz
 		conflict=/repo/vitasdk-transaction-conflict-1.0-1-vita.pkg.tar.xz
+		consumer=/repo/vitasdk-transaction-consumer-1.0-1-vita.pkg.tar.xz
 		config=/etc/pacman-vitasdk.conf
 		fixture_dir=/sdk/arm-vita-eabi/share/vitasdk-transaction-test
 
-		repo-add /repo/vitasdk-test.db.tar.gz "$base_v1" "$addon"
+		repo-add /repo/vitasdk-test.db.tar.gz "$base_v1" "$addon" "$consumer"
 		pacman --config "$config" --sync --refresh --refresh --noconfirm
 		pacman --config "$config" --sync --noconfirm vitasdk-transaction-fixture
 		pacman --config "$config" --query vitasdk-transaction-fixture |
 			grep -qx "vitasdk-transaction-fixture 1.0-1"
 		grep -qx "1.0" "$fixture_dir/version.txt"
 
+		if pacman --config "$config" --sync --noconfirm vitasdk-transaction-consumer; then
+			printf "versioned dependency was incorrectly satisfied by 1.0\n" >&2
+			exit 1
+		fi
+		test ! -e "$fixture_dir/consumer.txt"
+		pacman --config "$config" --query vitasdk-transaction-fixture |
+			grep -qx "vitasdk-transaction-fixture 1.0-1"
+
 		repo-add /repo/vitasdk-test.db.tar.gz "$base_v2"
-		pacman --config "$config" --sync --refresh --refresh --sysupgrade --noconfirm
+		pacman --config "$config" --sync --refresh --refresh --noconfirm
+		pacman --config "$config" --sync --noconfirm vitasdk-transaction-consumer
 		pacman --config "$config" --query vitasdk-transaction-fixture |
 			grep -qx "vitasdk-transaction-fixture 2.0-1"
+		pacman --config "$config" --query vitasdk-transaction-consumer |
+			grep -qx "vitasdk-transaction-consumer 1.0-1"
 		grep -qx "2.0" "$fixture_dir/version.txt"
 		grep -qx "upgraded" "$fixture_dir/upgrade-marker.txt"
+		grep -qx "consumer" "$fixture_dir/consumer.txt"
 
 		if pacman --config "$config" --upgrade --noconfirm "$conflict"; then
 			printf "file-conflicting package was accepted\n" >&2
@@ -71,6 +84,7 @@ docker run --rm \
 		pacman --config "$config" --query vitasdk-transaction-fixture |
 			grep -qx "vitasdk-transaction-fixture 2.0-1"
 
+		pacman --config "$config" --remove --noconfirm vitasdk-transaction-consumer
 		pacman --config "$config" --sync --noconfirm vitasdk-transaction-addon
 		grep -qx "addon" "$fixture_dir/addon.txt"
 		pacman --config "$config" --remove --noconfirm vitasdk-transaction-fixture

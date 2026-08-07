@@ -1,0 +1,15 @@
+pkgname=vitasdk-transaction-consumer
+pkgver=1.0
+pkgrel=1
+pkgdesc="VitaSDK versioned-dependency transaction test fixture"
+arch=('vita')
+url="https://vitasdk.org/"
+license=('MIT')
+depends=('vitasdk-transaction-fixture>=2.0')
+options=('!strip' '!docs' '!libtool' '!staticlibs' '!emptydirs' '!zipman' '!purge' '!debug')
+
+package() {
+	local fixture_dir="$pkgdir$VITASDK/arm-vita-eabi/share/vitasdk-transaction-test"
+	install -dm755 "$fixture_dir"
+	printf 'consumer\n' > "$fixture_dir/consumer.txt"
+}
