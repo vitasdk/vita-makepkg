@@ -35,8 +35,9 @@ lint_provides() {
 
 	provides_list=("${provides[@]}")
 	for a in "${arch[@]}"; do
-		array_build list "provides_$a"
-		provides_list+=("${list[@]}")
+		if array_build list "provides_$a"; then
+			provides_list+=("${list[@]}")
+		fi
 	done
 
 	for name in "${pkgname[@]}"; do

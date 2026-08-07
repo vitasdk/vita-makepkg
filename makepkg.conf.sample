@@ -37,7 +37,7 @@ AR="arm-vita-eabi-ar"
 RANLIB="arm-vita-eabi-ranlib"
 CC="arm-vita-eabi-gcc"
 CXX="arm-vita-eabi-g++"
-CARCH="arm"
+CARCH="vita"
 CHOST="arm-vita-eabi"
 
 # Cmake args for when you're too lazy to use a toolchain file : TODO - don't be lazy!
@@ -147,7 +147,7 @@ COMPRESSZ=(compress -c -f)
 # WARNING: Do NOT modify these variables unless you know what you are
 #          doing.
 #
-PKGEXT='.tar.xz'
+PKGEXT='.pkg.tar.xz'
 SRCEXT='.src.tar.gz'
 
 # vim: set ft=sh ts=2 sw=2 et:

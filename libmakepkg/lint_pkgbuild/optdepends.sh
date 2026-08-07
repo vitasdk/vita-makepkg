@@ -35,8 +35,9 @@ lint_optdepends() {
 
 	optdepends_list=("${optdepends[@]}")
 	for a in "${arch[@]}"; do
-		array_build list "optdepends_$a"
-		optdepends_list+=("${list[@]}")
+		if array_build list "optdepends_$a"; then
+			optdepends_list+=("${list[@]}")
+		fi
 	done
 
 	for name in "${pkgname[@]}"; do
