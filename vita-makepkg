@@ -89,6 +89,7 @@ SIGNPKG=''
 SPLITPKG=0
 SOURCEONLY=0
 VERIFYSOURCE=0
+PACMAN_CLI_OPTS=()
 
 shopt -s extglob
 
@@ -211,12 +212,25 @@ missing_source_file() {
 }
 
 run_pacman() {
-	if (( "$1" == "-U" )); then
-		vdpm "${*:2}"
-	else
-		echo "asked to run pacman?"
-		exit 1
+	if [[ -z $PACMAN_PATH ]]; then
+		error "$(gettext "Cannot find the VitaSDK package client: %s")" "$PACMAN"
+		return 126
 	fi
+	if ! mkdir -p "$VITASDK/var/lib/pacman" \
+			"$VITASDK/var/cache/pacman/pkg" "$VITASDK/var/log"; then
+		error "$(gettext "Cannot initialize the VitaSDK package database under %s")" \
+			"$VITASDK"
+		return 1
+	fi
+
+	"$PACMAN_PATH" \
+		--config "$PACMAN_CONF" \
+		--root "$VITASDK" \
+		--dbpath "$VITASDK/var/lib/pacman" \
+		--cachedir "$VITASDK/var/cache/pacman/pkg" \
+		--logfile "$VITASDK/var/log/pacman.log" \
+		--noscriptlet \
+		"${PACMAN_CLI_OPTS[@]}" "$@"
 }
 
 check_deps() {
@@ -225,15 +239,19 @@ check_deps() {
 	if (( NODEPS )); then
 		return 0
 	fi
-	
-	# forceful install if not exist dep libs
-	for pkg in ${@}; do
-		if [[ -n $(find ${VITASDK}/arm-vita-eabi/lib -maxdepth 1 -iname ${pkg}.a) ]] ||
-			[[ -n $(find ${VITASDK}/arm-vita-eabi/lib -maxdepth 1 -iname lib${pkg}.a) ]]; then
-			continue
-		fi
-		run_pacman -U "$pkg"
-	done
+
+	local ret=0
+	local pmout
+	pmout=$(run_pacman -T "$@")
+	ret=$?
+
+	if (( ret == 127 )); then
+		printf '%s\n' "$pmout"
+	elif (( ret )); then
+		error "$(gettext "'%s' returned a fatal error (%i): %s")" \
+			"$PACMAN" "$ret" "$pmout"
+		return "$ret"
+	fi
 }
 
 handle_deps() {
@@ -254,7 +272,7 @@ handle_deps() {
 
 		if ! run_pacman -S --asdeps "${deplist[@]}"; then
 			error "$(gettext "'%s' failed to install missing dependencies.")" "$PACMAN"
-			exit 1 # TODO: error code
+			return $R_DEPS_MISSING
 		fi
 	fi
 
@@ -264,6 +282,7 @@ handle_deps() {
 	shopt -u extglob
 	source /etc/profile &>/dev/null
 	eval "$shellopts"
+	umask 0022
 
 	return $R_DEPS_SATISFIED
 }
@@ -693,6 +712,24 @@ write_buildinfo() {
 	write_kv_pair "buildtoolver" "$makepkg_version"
 	write_kv_pair "buildenv" "${BUILDENV[@]}"
 	write_kv_pair "options" "${OPTIONS[@]}"
+
+	if [[ -n $PACMAN_PATH && -r $PACMAN_CONF ]]; then
+		local package_info
+		if ! package_info=$(LC_ALL=C run_pacman -Qi); then
+			error "$(gettext "Cannot read the VitaSDK package database for %s")" \
+				".BUILDINFO"
+			exit 1
+		fi
+		local installed_packages=()
+		while IFS= read -r package; do
+			[[ -n $package ]] && installed_packages+=("$package")
+		done < <(awk -F': ' '
+			/^Name[[:space:]]/ {printf "%s", $2}
+			/^Version[[:space:]]/ {printf "-%s", $2}
+			/^Architecture[[:space:]]/ {print "-" $2}
+		' <<< "$package_info" | LC_ALL=C sort)
+		write_kv_pair "installed" "${installed_packages[@]}"
+	fi
 }
 
 list_package_files() {
@@ -701,12 +738,35 @@ list_package_files() {
 
 	(
 		export LC_COLLATE=C
-		shopt -s dotglob nullglob
-		for path in *; do
+		shopt -s dotglob globstar nullglob
+		for path in **/*; do
 			[[ -n $excluded && $path = "$excluded" ]] && continue
 			printf '%s\0' "$path"
 		done
 	)
+}
+
+set_package_mtime() {
+	local path=$1
+	local timestamp
+
+	if touch -h -d "@$SOURCE_DATE_EPOCH" "$path" 2>/dev/null; then
+		return 0
+	fi
+
+	if ! timestamp=$(date -u -r "$SOURCE_DATE_EPOCH" '+%Y%m%d%H%M.%S'); then
+		error "$(gettext "Cannot convert SOURCE_DATE_EPOCH on this host: %s")" \
+			"$SOURCE_DATE_EPOCH"
+		return 1
+	fi
+	touch -h -t "$timestamp" "$path"
+}
+
+normalize_package_mtimes() {
+	local path
+	while IFS= read -r -d '' path; do
+		set_package_mtime "$path" || return 1
+	done < <(find . -print0)
 }
 
 create_package() {
@@ -737,6 +797,10 @@ create_package() {
 	write_pkginfo > .PKGINFO
 	write_buildinfo > .BUILDINFO
 
+	# Package metadata and payload must not retain wall-clock or filesystem
+	# traversal differences from the build host.
+	normalize_package_mtimes || exit 1
+
 	# tar it up
 	local fullver=$(get_full_version)
 	local pkg_file="$PKGDEST/${pkgname}-${fullver}-${pkgarch}${PKGEXT}"
@@ -751,11 +815,12 @@ create_package() {
 
 	msg2 "$(gettext "Generating %s file...")" ".MTREE"
 	list_package_files .MTREE |
-		COPYFILE_DISABLE=1 LANG=C bsdtar -cf - --format=mtree \
+		COPYFILE_DISABLE=1 LANG=C bsdtar -cnf - --format=mtree \
 			--no-acls --no-fflags --no-mac-metadata --no-xattrs \
 			--options='!all,use-set,type,uid,gid,mode,time,size,sha256,link' \
 			--uid 0 --gid 0 --null --files-from - |
 		gzip -c -f -n > .MTREE || ret=$?
+	set_package_mtime .MTREE || exit 1
 
 	if (( ret )); then
 		error "$(gettext "Failed to create package metadata.")"
@@ -769,7 +834,7 @@ create_package() {
 	# archive created using the same command line distinct from another.
 	# Disable bsdtar compression and use gzip -n for now.
 	list_package_files |
-	COPYFILE_DISABLE=1 LANG=C bsdtar -cf - \
+	COPYFILE_DISABLE=1 LANG=C bsdtar -cnf - \
 		--no-acls --no-fflags --no-mac-metadata --no-xattrs \
 		--uid 0 --gid 0 --uname root --gname root \
 		--null --files-from - |
@@ -920,7 +985,6 @@ create_srcpackage() {
 	rm -rf "${srclinks}"
 }
 
-# this function always returns 0 to make sure clean-up will still occur
 install_package() {
 	(( ! INSTALL )) && return
 
@@ -946,7 +1010,7 @@ install_package() {
 
 	if ! run_pacman -U "${pkglist[@]}"; then
 		warning "$(gettext "Failed to install built package(s).")"
-		return 0
+		return 1
 	fi
 }
 
@@ -983,7 +1047,10 @@ check_vcs_software() {
 	# we currently only use global depends/makedepends arrays for --syncdeps
 	for attr in depends makedepends; do
 		get_pkgbuild_attribute "$pkg" "$attr" 1 'deps'
-		check_deps "${deps[@]}"
+		all_deps+=("${deps[@]}")
+
+		get_pkgbuild_attribute "$pkg" "${attr}_$CARCH" 1 'deps'
+		all_deps+=("${deps[@]}")
 	done
 
 	get_all_sources_for_arch 'all_sources'
@@ -1021,10 +1088,16 @@ check_software() {
 	# check for needed software
 	local ret=0
 
-	# check for sudo if we will need it during makepkg execution
-	if (( DEP_BIN || RMDEPS || INSTALL )); then
-		if ! type -p sudo >/dev/null; then
-			warning "$(gettext "Cannot find the %s binary. Will use %s to acquire root privileges.")" "sudo" "su"
+	if (( DEP_BIN || RMDEPS || INSTALL ||
+			(! NODEPS && (${#depends[@]} || ${#makedepends[@]} ||
+			${#checkdepends[@]})) )); then
+		if [[ -z $PACMAN_PATH ]]; then
+			error "$(gettext "Cannot find the VitaSDK package client: %s")" "$PACMAN"
+			ret=1
+		elif [[ ! -r $PACMAN_CONF ]]; then
+			error "$(gettext "Cannot read the VitaSDK package configuration: %s")" \
+				"$PACMAN_CONF"
+			ret=1
 		fi
 	fi
 
@@ -1288,6 +1361,8 @@ while true; do
 		# Pacman Options
 		--asdeps)         ASDEPS=1;;
 		--needed)         NEEDED=1;;
+		--noconfirm)      PACMAN_CLI_OPTS+=(--noconfirm);;
+		--noprogressbar)  PACMAN_CLI_OPTS+=(--noprogressbar);;
 
 		# Makepkg Options
 		--allsource)      SOURCEONLY=2 ;;
@@ -1306,7 +1381,7 @@ while true; do
 		-i|--install)     INSTALL=1 ;;
 		--key)            shift; GPGKEY=$1 ;;
 		-L|--log)         LOGGING=1 ;;
-		-m|--nocolor)     USE_COLOR='n';;
+		-m|--nocolor)     USE_COLOR='n'; PACMAN_CLI_OPTS+=(--color never);;
 		--noarchive)      NOARCHIVE=1 ;;
 		--nocheck)        RUN_CHECK='n' ;;
 		--noprepare)      RUN_PREPARE='n' ;;
@@ -1450,6 +1525,19 @@ PACKAGER=${_PACKAGER:-$PACKAGER}
 CARCH=${_CARCH:-$CARCH}
 SOURCE_DATE_EPOCH=${SOURCE_DATE_EPOCH:-$(date -u "+%s")}
 export SOURCE_DATE_EPOCH
+
+if [[ -z $VITASDK || $VITASDK != /* || $VITASDK = / ]]; then
+	error "$(gettext "%s must be an absolute, non-root path.")" "VITASDK"
+	exit 1
+fi
+
+PACMAN=${PACMAN:-$VITASDK/bin/pacman}
+PACMAN_CONF=${PACMAN_CONF:-$VITASDK/etc/pacman.conf}
+if [[ $PACMAN = */* ]]; then
+	[[ -x $PACMAN ]] && PACMAN_PATH=$PACMAN || PACMAN_PATH=
+else
+	PACMAN_PATH=$(type -P "$PACMAN" || true)
+fi
 
 if (( ! INFAKEROOT )); then
 	if (( EUID == 0 )); then
@@ -1646,6 +1734,42 @@ if (( SOURCEONLY )); then
 
 	msg "$(gettext "Source package created: %s")" "$pkgbase ($(date))"
 	exit 0
+fi
+
+if (( NODEPS || (VERIFYSOURCE && ! DEP_BIN) )); then
+	if (( NODEPS )); then
+		warning "$(gettext "Skipping dependency checks.")"
+	fi
+else
+	if (( RMDEPS && ! INSTALL )); then
+		original_pkglist=($(run_pacman -Qq))
+	fi
+	deperr=0
+
+	msg "$(gettext "Checking runtime dependencies...")"
+	resolve_deps "${depends[@]}" || deperr=1
+
+	if (( RMDEPS && INSTALL )); then
+		original_pkglist=($(run_pacman -Qq))
+	fi
+
+	if (( ! deperr )); then
+		msg "$(gettext "Checking buildtime dependencies...")"
+		if (( CHECKFUNC )); then
+			resolve_deps "${makedepends[@]}" "${checkdepends[@]}" || deperr=1
+		else
+			resolve_deps "${makedepends[@]}" || deperr=1
+		fi
+	fi
+
+	if (( RMDEPS )); then
+		current_pkglist=($(run_pacman -Qq))
+	fi
+
+	if (( deperr )); then
+		error "$(gettext "Could not resolve all dependencies.")"
+		exit 1
+	fi
 fi
 
 # get back to our src directory so we can begin with sources

@@ -15,6 +15,18 @@ tests/validate-zlib-package.sh \
   ../packages/zlib/zlib-1.3.2-2-vita.pkg.tar.xz --pacman
 ```
 
+Exercise rootless dependency resolution and verify that two builds with the
+same inputs and `SOURCE_DATE_EPOCH` are byte-identical:
+
+```sh
+tests/test-dependency-resolution.sh
+```
+
+This test uses a recording package-client fixture so it can assert the exact
+root, database, cache and non-interactive arguments without a network
+repository. `tests/test-transactions.sh` separately validates the generated
+packages with pacman and `repo-add`.
+
 The container test uses `SigLevel = Never` only for its local, ephemeral
 repository. Published VitaSDK repositories will be accepted only after the
 signed channel manifest and database hash have been verified.
