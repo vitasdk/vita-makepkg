@@ -223,13 +223,22 @@ run_pacman() {
 		return 1
 	fi
 
+	# --noscriptlet belongs to transactions only. Pacman rejects it outright
+	# for queries and for deptest, so pass it only when the operation named by
+	# the first argument can actually run a scriptlet.
+	local -a scriptlet_option=()
+	case ${1-} in
+		-S*|-U*|-R*|--sync|--upgrade|--remove)
+			scriptlet_option=(--noscriptlet) ;;
+	esac
+
 	"$PACMAN_PATH" \
 		--config "$PACMAN_CONF" \
 		--root "$VITASDK" \
 		--dbpath "$VITASDK/var/lib/pacman" \
 		--cachedir "$VITASDK/var/cache/pacman/pkg" \
 		--logfile "$VITASDK/var/log/pacman.log" \
-		--noscriptlet \
+		"${scriptlet_option[@]}" \
 		"${PACMAN_CLI_OPTS[@]}" "$@"
 }
 
@@ -714,12 +723,20 @@ write_buildinfo() {
 	write_kv_pair "options" "${OPTIONS[@]}"
 
 	if [[ -n $PACMAN_PATH && -r $PACMAN_CONF ]]; then
-		local package_info
-		if ! package_info=$(LC_ALL=C run_pacman -Qi); then
+		local package_info package_error status
+		# Pacman exits non-zero on an empty local database without reporting
+		# anything, and that is not a failure: it means the SDK has no packages
+		# registered yet. Only a query that also complains is a real error.
+		package_error=$(mktemp)
+		package_info=$(LC_ALL=C run_pacman -Qi 2>"$package_error") || status=$?
+		if (( ${status:-0} )) && [[ -s $package_error ]]; then
 			error "$(gettext "Cannot read the VitaSDK package database for %s")" \
 				".BUILDINFO"
+			cat -- "$package_error" >&2
+			rm -f -- "$package_error"
 			exit 1
 		fi
+		rm -f -- "$package_error"
 		local installed_packages=()
 		while IFS= read -r package; do
 			[[ -n $package ]] && installed_packages+=("$package")
