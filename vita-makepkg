@@ -1548,7 +1548,7 @@ if [[ -z $VITASDK || $VITASDK != /* || $VITASDK = / ]]; then
 	exit 1
 fi
 
-PACMAN=${PACMAN:-$VITASDK/bin/pacman}
+PACMAN=${PACMAN:-$VITASDK/libexec/vdpm/pacman}
 PACMAN_CONF=${PACMAN_CONF:-$VITASDK/etc/pacman.conf}
 if [[ $PACMAN = */* ]]; then
 	[[ -x $PACMAN ]] && PACMAN_PATH=$PACMAN || PACMAN_PATH=

@@ -16,7 +16,7 @@ cleanup() {
 }
 trap cleanup EXIT
 
-mkdir -p "$sdk_root/bin" "$sdk_root/etc" "$work_root/build" "$package_root"
+mkdir -p "$sdk_root/libexec/vdpm" "$sdk_root/etc" "$work_root/build" "$package_root"
 
 cat > "$sdk_root/etc/pacman.conf" <<'EOF'
 [options]
@@ -24,7 +24,10 @@ Architecture = vita
 SigLevel = Never
 EOF
 
-cat > "$sdk_root/bin/pacman" <<'EOF'
+# Where the SDK actually puts the client. The fixture used to put it in
+# bin/, which is where the default pointed, so the two agreed with each
+# other and with nothing else.
+cat > "$sdk_root/libexec/vdpm/pacman" <<'EOF'
 #!/usr/bin/env bash
 set -euo pipefail
 
@@ -75,7 +78,7 @@ INFO
 		;;
 esac
 EOF
-chmod +x "$sdk_root/bin/pacman"
+chmod +x "$sdk_root/libexec/vdpm/pacman"
 
 cat > "$temporary_root/makepkg.conf" <<EOF
 PREFIX="$sdk_root/arm-vita-eabi"
