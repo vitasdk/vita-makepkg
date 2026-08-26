@@ -146,8 +146,15 @@ buildinfo=$(bsdtar -xOf "$package" .BUILDINFO)
 grep -qx 'installed = runtime-2.1-1-vita' <<< "$buildinfo"
 grep -Fq -- "--root $sdk_root" "$pacman_log"
 grep -Fq -- "--dbpath $sdk_root/var/lib/pacman" "$pacman_log"
-grep -Fq -- '--noscriptlet --noconfirm --noprogressbar -T runtime\>=2' "$pacman_log"
+grep -Fq -- '--noconfirm --noprogressbar -T runtime\>=2' "$pacman_log"
 grep -Fq -- '--noscriptlet --noconfirm --noprogressbar -S --asdeps runtime\>=2' "$pacman_log"
-grep -Fq -- '--noscriptlet --noconfirm --noprogressbar -T builder' "$pacman_log"
+grep -Fq -- '--noconfirm --noprogressbar -T builder' "$pacman_log"
+# --noscriptlet belongs to a transaction; pacman rejects it outright on a
+# query. run_pacman stopped passing it there in 32f863c and these three
+# lines went on asserting that it did, so nothing watched either half.
+if grep -E -- ' (-T|-Q[a-z]*) ' "$pacman_log" | grep -Fq -- '--noscriptlet'; then
+	printf 'a query was invoked with --noscriptlet\n' >&2
+	exit 1
+fi
 
 printf 'vita-makepkg dependency and reproducibility contracts passed\n'
